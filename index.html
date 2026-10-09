@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance Poll</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --ink: #1a1d23;
+    --ink-muted: #5b6270;
+    --accent: #2f6fed;
+    --accent-ink: #ffffff;
+    --border: #d8dce3;
+    --border-focus: #2f6fed;
+    --error: #c0362c;
+    --success-bg: #ecfaf0;
+    --success-ink: #166534;
+    --success-border: #a7e3b8;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 15% 0%, rgba(47,111,237,0.08), transparent 55%),
+      radial-gradient(circle at 85% 100%, rgba(47,111,237,0.06), transparent 55%);
+    color: var(--ink);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 32px 16px 64px;
+    line-height: 1.5;
+  }
+
+  .wrap {
+    width: 100%;
+    max-width: 440px;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 32px 28px 28px;
+    box-shadow: 0 1px 2px rgba(20,22,28,0.04), 0 12px 32px -12px rgba(20,22,28,0.12);
+    border: 1px solid rgba(20,22,28,0.05);
+  }
+
+  .eyebrow {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+
+  h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+
+  .subtitle {
+    font-size: 15px;
+    color: var(--ink-muted);
+    margin: 0 0 28px;
+  }
+
+  label.field-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--ink);
+  }
+
+  input[type="text"] {
+    width: 100%;
+    font-size: 16px;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+    font-family: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  input[type="text"]::placeholder {
+    color: #9aa1ad;
+  }
+
+  input[type="text"]:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(47,111,237,0.15);
+  }
+
+  input[type="text"].has-error {
+    border-color: var(--error);
+  }
+
+  .section {
+    margin-top: 24px;
+  }
+
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+    user-select: none;
+  }
+
+  .option:hover {
+    border-color: #b7c0d1;
+    background: #fafbfc;
+  }
+
+  .option.checked {
+    border-color: var(--accent);
+    background: rgba(47,111,237,0.06);
+  }
+
+  .option.error-highlight {
+    border-color: var(--error);
+  }
+
+  .option input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border: 1.5px solid var(--border);
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    background: #fff;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .option input[type="radio"]:checked {
+    border-color: var(--accent);
+  }
+
+  .option input[type="radio"]:checked::after {
+    content: "";
+    position: absolute;
+    left: 4.5px;
+    top: 4.5px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .option input[type="radio"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(47,111,237,0.2);
+  }
+
+  .option-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .option-title {
+    font-size: 15.5px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .option-sub {
+    font-size: 12.5px;
+    color: var(--ink-muted);
+  }
+
+  .error-msg {
+    font-size: 13px;
+    color: var(--error);
+    margin-top: 8px;
+    min-height: 0;
+    display: none;
+  }
+
+  .error-msg.visible {
+    display: block;
+  }
+
+  button[type="submit"] {
+    width: 100%;
+    margin-top: 28px;
+    padding: 14px 0;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.08s ease;
+  }
+
+  button[type="submit"]:hover {
+    background: #2459c9;
+  }
+
+  button[type="submit"]:active {
+    transform: scale(0.99);
+  }
+
+  button[type="submit"]:disabled {
+    background: #9fb6ea;
+    cursor: not-allowed;
+  }
+
+  .status-banner {
+    margin-top: 18px;
+    padding: 13px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    display: none;
+  }
+
+  .status-banner.visible {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .status-banner.success {
+    background: var(--success-bg);
+    color: var(--success-ink);
+    border: 1px solid var(--success-border);
+  }
+
+  .status-banner.error {
+    background: #fdecea;
+    color: var(--error);
+    border: 1px solid #f3b4ac;
+  }
+
+  .success-view {
+    display: none;
+    text-align: center;
+    padding: 20px 0 4px;
+  }
+
+  .success-view.visible {
+    display: block;
+  }
+
+  .success-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--success-bg);
+    border: 1.5px solid var(--success-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 18px;
+  }
+
+  .success-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .success-view h2 {
+    font-size: 20px;
+    margin: 0 0 8px;
+  }
+
+  .success-view p {
+    color: var(--ink-muted);
+    font-size: 14.5px;
+    margin: 0 0 24px;
+  }
+
+  .link-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 8px;
+  }
+
+  form.hidden {
+    display: none;
+  }
+
+  .page-footer {
+    text-align: center;
+    margin-top: 18px;
+  }
+
+  .officer-link {
+    font-size: 12.5px;
+    color: #9aa1ad;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: 6px;
+  }
+
+  .officer-link:hover {
+    color: var(--ink-muted);
+    text-decoration: underline;
+  }
+
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(20,22,28,0.45);
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 50;
+  }
+
+  .modal-overlay.visible {
+    display: flex;
+  }
+
+  .modal-box {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 26px 24px;
+    width: 100%;
+    max-width: 340px;
+    box-shadow: 0 20px 50px -12px rgba(20,22,28,0.35);
+  }
+
+  .modal-box h2 {
+    font-size: 18px;
+    margin: 0 0 6px;
+  }
+
+  .modal-box p.modal-sub {
+    font-size: 13.5px;
+    color: var(--ink-muted);
+    margin: 0 0 18px;
+  }
+
+  input[type="password"] {
+    width: 100%;
+    font-size: 16px;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+    font-family: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  input[type="password"]:focus {
+    outline: none;
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(47,111,237,0.15);
+  }
+
+  input[type="password"].has-error {
+    border-color: var(--error);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+  }
+
+  .modal-actions button[type="submit"] {
+    margin-top: 0;
+    flex: 1;
+  }
+
+  .btn-secondary {
+    flex: 1;
+    padding: 14px 0;
+    background: #eef0f3;
+    color: var(--ink);
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+
+  .btn-secondary:hover {
+    background: #e1e4e9;
+  }
+
+  .officer-panel {
+    display: none;
+  }
+
+  .officer-panel.visible {
+    display: block;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .stat-tile {
+    background: #f7f8fa;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 14px;
+    text-align: center;
+  }
+
+  .stat-tile.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .stat-number {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.1;
+  }
+
+  .stat-number.ink {
+    color: var(--ink);
+  }
+
+  .stat-label {
+    font-size: 12.5px;
+    color: var(--ink-muted);
+    margin-top: 4px;
+  }
+
+  .stat-divider {
+    margin: 22px 0 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .officer-note {
+    font-size: 12.5px;
+    color: var(--ink-muted);
+    margin-top: 18px;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" id="pollCard">
+      <p class="eyebrow">RSVP</p>
+      <h1 id="pageTitle">Who's coming?</h1>
+      <p class="subtitle">Let us know your name and which day(s) you'll be there.</p>
+
+      <form id="pollForm" novalidate>
+        <div>
+          <label class="field-label" for="nameInput">Your name</label>
+          <input type="text" id="nameInput" data-testid="name-input" placeholder="e.g. Jordan Lee" autocomplete="name">
+          <div class="error-msg" id="nameError" data-testid="name-error">Please enter your name.</div>
+        </div>
+
+        <div class="section">
+          <label class="field-label">Which date(s) are you coming?</label>
+          <div class="options" id="optionsGroup" role="radiogroup">
+            <label class="option" id="optOct17Label" for="optOct17">
+              <input type="radio" id="optOct17" data-testid="checkbox-oct17" name="dates" value="oct17">
+              <span class="option-text">
+                <span class="option-title">October 17th</span>
+                <span class="option-sub">Saturday</span>
+              </span>
+            </label>
+            <label class="option" id="optOct18Label" for="optOct18">
+              <input type="radio" id="optOct18" data-testid="checkbox-oct18" name="dates" value="oct18">
+              <span class="option-text">
+                <span class="option-title">October 18th</span>
+                <span class="option-sub">Sunday</span>
+              </span>
+            </label>
+            <label class="option" id="optBothLabel" for="optBoth">
+              <input type="radio" id="optBoth" data-testid="checkbox-both" name="dates" value="both">
+              <span class="option-text">
+                <span class="option-title">Both dates</span>
+                <span class="option-sub">October 17th &amp; 18th</span>
+              </span>
+            </label>
+          </div>
+          <div class="error-msg" id="datesError" data-testid="dates-error">Please select at least one option.</div>
+        </div>
+
+        <button type="submit" id="submitBtn" data-testid="submit-button">Submit response</button>
+
+        <div class="status-banner" id="statusBanner" data-testid="status-banner"></div>
+      </form>
+
+      <div class="success-view" id="successView" data-testid="success-view">
+        <div class="success-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <h2>Thanks, <span id="successName">you</span>!</h2>
+        <p id="successDetail">Your response has been recorded.</p>
+        <button type="button" class="link-btn" id="submitAnotherBtn" data-testid="submit-another-button">Submit another response</button>
+      </div>
+    </div>
+
+    <div class="officer-panel" id="officerPanel" data-testid="officer-panel">
+      <div class="card">
+        <p class="eyebrow">Officer Access</p>
+        <h1>Poll summary</h1>
+        <p class="subtitle">Response totals recorded on this device.</p>
+
+        <div class="stat-grid">
+          <div class="stat-tile full-width">
+            <div class="stat-number" id="statTotal" data-testid="stat-total">0</div>
+            <div class="stat-label">Total responses</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-number ink" id="statAttending" data-testid="stat-attending">0</div>
+            <div class="stat-label">Attending</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-number ink" id="statNotAttending" data-testid="stat-not-attending">0</div>
+            <div class="stat-label">Not attending</div>
+          </div>
+        </div>
+
+        <p class="stat-divider">Breakdown by date</p>
+        <div class="stat-grid">
+          <div class="stat-tile">
+            <div class="stat-number" id="statOct17" data-testid="stat-oct17">0</div>
+            <div class="stat-label">October 17th</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-number" id="statOct18" data-testid="stat-oct18">0</div>
+            <div class="stat-label">October 18th</div>
+          </div>
+          <div class="stat-tile full-width">
+            <div class="stat-number" id="statBoth" data-testid="stat-both">0</div>
+            <div class="stat-label">Both dates</div>
+          </div>
+        </div>
+
+        <p class="officer-note">Based on responses submitted from this browser. The full set of responses lives in the connected Google Sheet.</p>
+
+        <button type="button" class="btn-secondary" id="officerCloseBtn" data-testid="officer-close-button" style="width:100%; margin-top:22px;">Back to poll</button>
+      </div>
+    </div>
+
+    <div class="page-footer" id="pageFooter">
+      <button type="button" class="officer-link" id="officerLink" data-testid="officer-access-link">Officer Access</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="officerModal" data-testid="officer-password-modal">
+    <div class="modal-box">
+      <form id="officerPasswordForm" novalidate>
+        <h2>Officer Access</h2>
+        <p class="modal-sub">Enter the password to view poll results.</p>
+        <input type="password" id="officerPasswordInput" data-testid="officer-password-input" placeholder="Password" autocomplete="off">
+        <div class="error-msg" id="officerPasswordError" data-testid="officer-password-error">Incorrect password.</div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="officerCancelBtn" data-testid="officer-cancel-button">Cancel</button>
+          <button type="submit" id="officerUnlockBtn" data-testid="officer-unlock-button">Unlock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('pollForm');
+    const nameInput = document.getElementById('nameInput');
+    const nameError = document.getElementById('nameError');
+    const datesError = document.getElementById('datesError');
+    const optOct17 = document.getElementById('optOct17');
+    const optOct18 = document.getElementById('optOct18');
+    const optBoth = document.getElementById('optBoth');
+    const checkboxes = [optOct17, optOct18, optBoth];
+    const submitBtn = document.getElementById('submitBtn');
+    const statusBanner = document.getElementById('statusBanner');
+    const successView = document.getElementById('successView');
+    const successName = document.getElementById('successName');
+    const successDetail = document.getElementById('successDetail');
+    const submitAnotherBtn = document.getElementById('submitAnotherBtn');
+
+    const labelFor = (cb) => cb.closest('.option');
+
+    checkboxes.forEach(cb => {
+      cb.addEventListener('change', () => {
+        checkboxes.forEach(c => labelFor(c).classList.toggle('checked', c.checked));
+        if (checkboxes.some(c => c.checked)) {
+          clearDatesError();
+        }
+      });
+    });
+
+    nameInput.addEventListener('input', () => {
+      if (nameInput.value.trim()) clearNameError();
+    });
+
+    function setNameError(msg) {
+      nameError.textContent = msg;
+      nameError.classList.add('visible');
+      nameInput.classList.add('has-error');
+    }
+
+    function clearNameError() {
+      nameError.classList.remove('visible');
+      nameInput.classList.remove('has-error');
+    }
+
+    function setDatesError(msg) {
+      datesError.textContent = msg;
+      datesError.classList.add('visible');
+      checkboxes.forEach(cb => labelFor(cb).classList.add('error-highlight'));
+    }
+
+    function clearDatesError() {
+      datesError.classList.remove('visible');
+      checkboxes.forEach(cb => labelFor(cb).classList.remove('error-highlight'));
+    }
+
+    function showBanner(type, msg) {
+      statusBanner.textContent = msg;
+      statusBanner.className = 'status-banner visible ' + type;
+    }
+
+    function hideBanner() {
+      statusBanner.className = 'status-banner';
+    }
+
+    function selectedLabels() {
+      return checkboxes.filter(cb => cb.checked).map(cb => cb.parentElement.querySelector('.option-title').textContent);
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideBanner();
+
+      const name = nameInput.value.trim();
+      const anyChecked = checkboxes.some(cb => cb.checked);
+
+      let valid = true;
+      if (!name) {
+        setNameError('Please enter your name.');
+        valid = false;
+      } else {
+        clearNameError();
+      }
+
+      if (!anyChecked) {
+        setDatesError('Please select at least one option.');
+        valid = false;
+      } else {
+        clearDatesError();
+      }
+
+      if (!valid) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting…';
+
+      const payload = {
+        'Name': name,
+        'October 17': optOct17.checked ? 'Yes' : '',
+        'October 18': optOct18.checked ? 'Yes' : '',
+        'Both': optBoth.checked ? 'Yes' : ''
+      };
+
+      try {
+        const res = await fetch('api/save', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error('Request failed with status ' + res.status);
+
+        recordLocalSubmission({
+          oct17: optOct17.checked,
+          oct18: optOct18.checked,
+          both: optBoth.checked
+        });
+
+        successName.textContent = name;
+        successDetail.textContent = "We've recorded you for " + selectedLabels().join(' and ') + ".";
+        form.classList.add('hidden');
+        successView.classList.add('visible');
+      } catch (err) {
+        showBanner('error', "Something went wrong saving your response. Please check your connection and try again.");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit response';
+      }
+    });
+
+    submitAnotherBtn.addEventListener('click', () => {
+      form.reset();
+      checkboxes.forEach(cb => labelFor(cb).classList.remove('checked', 'error-highlight'));
+      clearNameError();
+      clearDatesError();
+      hideBanner();
+      successView.classList.remove('visible');
+      form.classList.remove('hidden');
+      nameInput.focus();
+    });
+
+    window.poll = {
+      getState: () => ({
+        name: nameInput.value,
+        oct17: optOct17.checked,
+        oct18: optOct18.checked,
+        both: optBoth.checked
+      })
+    };
+
+    const OFFICER_PASSWORD = 'CIRCLE K #1';
+    const LOCAL_SUBMISSIONS_KEY = 'attendancePollSubmissions';
+
+    const pollCard = document.getElementById('pollCard');
+    const officerPanel = document.getElementById('officerPanel');
+    const officerLink = document.getElementById('officerLink');
+    const officerModal = document.getElementById('officerModal');
+    const officerPasswordForm = document.getElementById('officerPasswordForm');
+    const officerPasswordInput = document.getElementById('officerPasswordInput');
+    const officerPasswordError = document.getElementById('officerPasswordError');
+    const officerCancelBtn = document.getElementById('officerCancelBtn');
+    const officerCloseBtn = document.getElementById('officerCloseBtn');
+    const statTotal = document.getElementById('statTotal');
+    const statAttending = document.getElementById('statAttending');
+    const statNotAttending = document.getElementById('statNotAttending');
+    const statOct17 = document.getElementById('statOct17');
+    const statOct18 = document.getElementById('statOct18');
+    const statBoth = document.getElementById('statBoth');
+
+    function getLocalSubmissions() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(LOCAL_SUBMISSIONS_KEY));
+        return Array.isArray(raw) ? raw : [];
+      } catch (err) {
+        return [];
+      }
+    }
+
+    function recordLocalSubmission(record) {
+      try {
+        const records = getLocalSubmissions();
+        records.push(record);
+        localStorage.setItem(LOCAL_SUBMISSIONS_KEY, JSON.stringify(records));
+      } catch (err) {
+        /* localStorage unavailable; summary just won't include this device's history */
+      }
+    }
+
+    function renderOfficerStats() {
+      const records = getLocalSubmissions();
+      const total = records.length;
+      const attending = records.filter(r => r.oct17 || r.oct18 || r.both).length;
+      statTotal.textContent = total;
+      statAttending.textContent = attending;
+      statNotAttending.textContent = total - attending;
+      statOct17.textContent = records.filter(r => r.oct17).length;
+      statOct18.textContent = records.filter(r => r.oct18).length;
+      statBoth.textContent = records.filter(r => r.both).length;
+    }
+
+    function openOfficerModal() {
+      officerPasswordInput.value = '';
+      officerPasswordError.classList.remove('visible');
+      officerPasswordInput.classList.remove('has-error');
+      officerModal.classList.add('visible');
+      officerPasswordInput.focus();
+    }
+
+    function closeOfficerModal() {
+      officerModal.classList.remove('visible');
+    }
+
+    officerLink.addEventListener('click', openOfficerModal);
+    officerCancelBtn.addEventListener('click', closeOfficerModal);
+
+    officerModal.addEventListener('click', (e) => {
+      if (e.target === officerModal) closeOfficerModal();
+    });
+
+    officerPasswordForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (officerPasswordInput.value === OFFICER_PASSWORD) {
+        closeOfficerModal();
+        renderOfficerStats();
+        pollCard.style.display = 'none';
+        officerPanel.classList.add('visible');
+      } else {
+        officerPasswordError.classList.add('visible');
+        officerPasswordInput.classList.add('has-error');
+        officerPasswordInput.value = '';
+        officerPasswordInput.focus();
+      }
+    });
+
+    officerPasswordInput.addEventListener('input', () => {
+      officerPasswordError.classList.remove('visible');
+      officerPasswordInput.classList.remove('has-error');
+    });
+
+    officerCloseBtn.addEventListener('click', () => {
+      officerPanel.classList.remove('visible');
+      pollCard.style.display = '';
+    });
+  </script>
+</body>
+</html>
