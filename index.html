@@ -473,6 +473,40 @@
     letter-spacing: 0.04em;
   }
 
+  .name-list {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  .name-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    font-size: 14px;
+    border-top: 1px solid #eceef2;
+  }
+
+  .name-list li:first-child {
+    border-top: none;
+  }
+
+  .name-list .when {
+    color: var(--ink-muted);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .name-list .empty {
+    color: var(--ink-muted);
+    justify-content: center;
+  }
+
   .officer-note {
     font-size: 12.5px;
     color: var(--ink-muted);
@@ -543,7 +577,7 @@
       <div class="card">
         <p class="eyebrow">Officer Access</p>
         <h1>Poll summary</h1>
-        <p class="subtitle">Response totals recorded on this device.</p>
+        <p class="subtitle">Live totals from everyone who has responded.</p>
 
         <div class="stat-grid">
           <div class="stat-tile full-width">
@@ -551,24 +585,24 @@
             <div class="stat-label">Total responses</div>
           </div>
           <div class="stat-tile">
-            <div class="stat-number ink" id="statAttending" data-testid="stat-attending">0</div>
-            <div class="stat-label">Attending</div>
+            <div class="stat-number ink" id="statDay17" data-testid="stat-day17">0</div>
+            <div class="stat-label">Coming Oct 17</div>
           </div>
           <div class="stat-tile">
-            <div class="stat-number ink" id="statNotAttending" data-testid="stat-not-attending">0</div>
-            <div class="stat-label">Not attending</div>
+            <div class="stat-number ink" id="statDay18" data-testid="stat-day18">0</div>
+            <div class="stat-label">Coming Oct 18</div>
           </div>
         </div>
 
-        <p class="stat-divider">Breakdown by date</p>
+        <p class="stat-divider">Breakdown by answer</p>
         <div class="stat-grid">
           <div class="stat-tile">
             <div class="stat-number" id="statOct17" data-testid="stat-oct17">0</div>
-            <div class="stat-label">October 17th</div>
+            <div class="stat-label">Oct 17 only</div>
           </div>
           <div class="stat-tile">
             <div class="stat-number" id="statOct18" data-testid="stat-oct18">0</div>
-            <div class="stat-label">October 18th</div>
+            <div class="stat-label">Oct 18 only</div>
           </div>
           <div class="stat-tile full-width">
             <div class="stat-number" id="statBoth" data-testid="stat-both">0</div>
@@ -576,9 +610,13 @@
           </div>
         </div>
 
-        <p class="officer-note">Based on responses submitted from this browser. The full set of responses lives in the connected Google Sheet.</p>
+        <p class="stat-divider">Responses</p>
+        <ul class="name-list" id="nameList" data-testid="name-list"></ul>
 
-        <button type="button" class="btn-secondary" id="officerCloseBtn" data-testid="officer-close-button" style="width:100%; margin-top:22px;">Back to poll</button>
+        <p class="officer-note">Full responses also live in the connected Google Sheet.</p>
+
+        <button type="button" class="btn-secondary" id="officerRefreshBtn" data-testid="officer-refresh-button" style="width:100%; margin-top:22px;">Refresh</button>
+        <button type="button" class="btn-secondary" id="officerCloseBtn" data-testid="officer-close-button" style="width:100%; margin-top:10px;">Back to poll</button>
       </div>
     </div>
 
@@ -603,6 +641,19 @@
   </div>
 
   <script>
+    // Google Apps Script web app URL (Deploy → Web app → copy the /exec URL).
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwhvJUEh0UaElbgBs4KMqialXPaTkdMEvzfXXsIYMscIclalMXIO7e5hLMcdYRN5PPd/exec';
+
+    // Plain-text body = no CORS preflight, which Apps Script can't answer.
+    async function callBackend(body) {
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    }
+
     const form = document.getElementById('pollForm');
     const nameInput = document.getElementById('nameInput');
     const nameError = document.getElementById('nameError');
@@ -695,27 +746,11 @@
       submitBtn.disabled = true;
       submitBtn.textContent = 'Submitting…';
 
-      const payload = {
-        'Name': name,
-        'October 17': optOct17.checked ? 'Yes' : '',
-        'October 18': optOct18.checked ? 'Yes' : '',
-        'Both': optBoth.checked ? 'Yes' : ''
-      };
+      const dates = checkboxes.find(cb => cb.checked).value;
 
       try {
-        const res = await fetch('api/save', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) throw new Error('Request failed with status ' + res.status);
-
-        recordLocalSubmission({
-          oct17: optOct17.checked,
-          oct18: optOct18.checked,
-          both: optBoth.checked
-        });
+        const result = await callBackend({ action: 'save', name, dates });
+        if (!result.ok) throw new Error(result.error || 'save failed');
 
         successName.textContent = name;
         successDetail.textContent = "We've recorded you for " + selectedLabels().join(' and ') + ".";
@@ -749,9 +784,6 @@
       })
     };
 
-    const OFFICER_PASSWORD = 'CIRCLE K #1';
-    const LOCAL_SUBMISSIONS_KEY = 'attendancePollSubmissions';
-
     const pollCard = document.getElementById('pollCard');
     const officerPanel = document.getElementById('officerPanel');
     const officerLink = document.getElementById('officerLink');
@@ -761,42 +793,51 @@
     const officerPasswordError = document.getElementById('officerPasswordError');
     const officerCancelBtn = document.getElementById('officerCancelBtn');
     const officerCloseBtn = document.getElementById('officerCloseBtn');
+    const officerUnlockBtn = document.getElementById('officerUnlockBtn');
+    const officerRefreshBtn = document.getElementById('officerRefreshBtn');
     const statTotal = document.getElementById('statTotal');
-    const statAttending = document.getElementById('statAttending');
-    const statNotAttending = document.getElementById('statNotAttending');
+    const statDay17 = document.getElementById('statDay17');
+    const statDay18 = document.getElementById('statDay18');
     const statOct17 = document.getElementById('statOct17');
     const statOct18 = document.getElementById('statOct18');
     const statBoth = document.getElementById('statBoth');
+    const nameList = document.getElementById('nameList');
 
-    function getLocalSubmissions() {
-      try {
-        const raw = JSON.parse(localStorage.getItem(LOCAL_SUBMISSIONS_KEY));
-        return Array.isArray(raw) ? raw : [];
-      } catch (err) {
-        return [];
+    // Held in memory only while the officer panel is open, for Refresh.
+    let officerPassword = '';
+
+    function renderOfficerStats(s) {
+      statTotal.textContent = s.total;
+      statDay17.textContent = s.oct17Only + s.both;
+      statDay18.textContent = s.oct18Only + s.both;
+      statOct17.textContent = s.oct17Only;
+      statOct18.textContent = s.oct18Only;
+      statBoth.textContent = s.both;
+
+      nameList.innerHTML = '';
+      if (!s.rows.length) {
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.textContent = 'No responses yet.';
+        nameList.appendChild(li);
+        return;
       }
+      s.rows.slice().reverse().forEach(r => {
+        const li = document.createElement('li');
+        const who = document.createElement('span');
+        who.textContent = r.name;
+        const when = document.createElement('span');
+        when.className = 'when';
+        when.textContent = r.dates;
+        li.append(who, when);
+        nameList.appendChild(li);
+      });
     }
 
-    function recordLocalSubmission(record) {
-      try {
-        const records = getLocalSubmissions();
-        records.push(record);
-        localStorage.setItem(LOCAL_SUBMISSIONS_KEY, JSON.stringify(records));
-      } catch (err) {
-        /* localStorage unavailable; summary just won't include this device's history */
-      }
-    }
-
-    function renderOfficerStats() {
-      const records = getLocalSubmissions();
-      const total = records.length;
-      const attending = records.filter(r => r.oct17 || r.oct18 || r.both).length;
-      statTotal.textContent = total;
-      statAttending.textContent = attending;
-      statNotAttending.textContent = total - attending;
-      statOct17.textContent = records.filter(r => r.oct17).length;
-      statOct18.textContent = records.filter(r => r.oct18).length;
-      statBoth.textContent = records.filter(r => r.both).length;
+    function showOfficerError(msg) {
+      officerPasswordError.textContent = msg;
+      officerPasswordError.classList.add('visible');
+      officerPasswordInput.classList.add('has-error');
     }
 
     function openOfficerModal() {
@@ -818,18 +859,46 @@
       if (e.target === officerModal) closeOfficerModal();
     });
 
-    officerPasswordForm.addEventListener('submit', (e) => {
+    officerPasswordForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (officerPasswordInput.value === OFFICER_PASSWORD) {
+      const pw = officerPasswordInput.value;
+      if (!pw) return showOfficerError('Enter the password.');
+
+      officerUnlockBtn.disabled = true;
+      officerUnlockBtn.textContent = 'Checking…';
+      try {
+        const s = await callBackend({ action: 'summary', password: pw });
+        if (!s.ok) {
+          showOfficerError(s.error === 'unauthorized' ? 'Incorrect password.' : 'Could not load results.');
+          officerPasswordInput.value = '';
+          officerPasswordInput.focus();
+          return;
+        }
+        officerPassword = pw;
         closeOfficerModal();
-        renderOfficerStats();
+        renderOfficerStats(s);
         pollCard.style.display = 'none';
+        document.getElementById('pageFooter').style.display = 'none';
         officerPanel.classList.add('visible');
-      } else {
-        officerPasswordError.classList.add('visible');
-        officerPasswordInput.classList.add('has-error');
-        officerPasswordInput.value = '';
-        officerPasswordInput.focus();
+      } catch (err) {
+        showOfficerError('Could not reach the server. Try again.');
+      } finally {
+        officerUnlockBtn.disabled = false;
+        officerUnlockBtn.textContent = 'Unlock';
+      }
+    });
+
+    officerRefreshBtn.addEventListener('click', async () => {
+      officerRefreshBtn.disabled = true;
+      officerRefreshBtn.textContent = 'Refreshing…';
+      try {
+        const s = await callBackend({ action: 'summary', password: officerPassword });
+        if (s.ok) renderOfficerStats(s);
+      } catch (err) {
+        /* keep showing the last loaded numbers */
+      } finally {
+        officerRefreshBtn.disabled = false;
+        officerRefreshBtn.textContent = 'Refresh';
       }
     });
 
@@ -840,7 +909,9 @@
 
     officerCloseBtn.addEventListener('click', () => {
       officerPanel.classList.remove('visible');
+      officerPassword = '';
       pollCard.style.display = '';
+      document.getElementById('pageFooter').style.display = '';
     });
   </script>
 </body>
